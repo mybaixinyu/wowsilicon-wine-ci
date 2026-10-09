@@ -44,6 +44,9 @@ jobs:
             --output "$RUNNER_TEMP/wine-src"
 
       - name: Build
+        env:
+          # Keep going past the first compile error so one run reports all of them.
+          MAKEFLAGS: -k
         run: |
           /usr/bin/arch -x86_64 /bin/bash tools/wine-runtime/build.sh \
             --source "$RUNNER_TEMP/wine-src" \

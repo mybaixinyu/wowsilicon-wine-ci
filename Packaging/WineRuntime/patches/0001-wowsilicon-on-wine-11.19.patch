@@ -1676,6 +1676,19 @@ index 0000000..5096768
 +{
 +    return __atomic_load_n(&gcmouse_active, __ATOMIC_SEQ_CST);
 +}
+diff --git a/dlls/winemac.drv/cocoa_window.m b/dlls/winemac.drv/cocoa_window.m
+index 5d17ce8..c47f491 100644
+--- a/dlls/winemac.drv/cocoa_window.m
++++ b/dlls/winemac.drv/cocoa_window.m
+@@ -2427,7 +2427,7 @@ - (void) sendEditMenuCommand:(int)command
+ 
+         if (mac_edit_menu == MAC_EDIT_MENU_DISABLED) // Shouldn't get here
+         {
+-            ERR(@"The Mac Edit menu is supposed to be disabled\n");
++            ERR("The Mac Edit menu is supposed to be disabled\n");
+             NSBeep();
+             return;
+         }
 diff --git a/dlls/winemac.drv/event.c b/dlls/winemac.drv/event.c
 index 83dba4f..d94a493 100644
 --- a/dlls/winemac.drv/event.c
