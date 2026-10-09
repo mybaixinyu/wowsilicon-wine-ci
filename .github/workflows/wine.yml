@@ -1,0 +1,78 @@
+name: wine
+
+# Builds the WoWSilicon-flavoured Wine runtime tree (x86_64 host, i386 + x86_64
+# Windows modules) on a newer WineAndAqua macOS branch than the one WoWSilicon
+# currently ships, using WoWSilicon's own tools/wine-runtime/{fetch-source,build}.sh
+# unchanged. Manual only.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wine:
+    runs-on: macos-26
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure Rosetta
+        run: |
+          if ! /usr/bin/arch -x86_64 /usr/bin/true 2>/dev/null; then
+            sudo softwareupdate --install-rosetta --agree-to-license
+          fi
+          /usr/bin/arch -x86_64 /usr/bin/true
+
+      - name: Install x86_64 Homebrew under /usr/local
+        run: |
+          if [ ! -x /usr/local/bin/brew ]; then
+            NONINTERACTIVE=1 /usr/bin/arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          fi
+          /usr/bin/arch -x86_64 /usr/local/bin/brew --version
+
+      - name: Install x86_64 build dependencies
+        run: |
+          /usr/bin/arch -x86_64 /usr/local/bin/brew install \
+            llvm bison flex mingw-w64 pkgconf freetype gnutls vulkan-loader vulkan-headers
+          /usr/local/opt/llvm/bin/clang --version
+          file /usr/local/opt/llvm/bin/clang
+
+      - name: Fetch pinned Wine source
+        run: |
+          /usr/bin/arch -x86_64 /bin/bash tools/wine-runtime/fetch-source.sh \
+            --output "$RUNNER_TEMP/wine-src"
+
+      - name: Build
+        run: |
+          /usr/bin/arch -x86_64 /bin/bash tools/wine-runtime/build.sh \
+            --source "$RUNNER_TEMP/wine-src" \
+            --build "$RUNNER_TEMP/wine-build" \
+            --install "$RUNNER_TEMP/wine-install"
+
+      - name: Package
+        run: |
+          mkdir -p out
+          {
+            echo "wine: $(jq -r '.wine.version + " " + .wine.branch + " " + .wine.commit' Packaging/WineRuntime/runtime-lock.json)"
+            echo "this repo: $GITHUB_SHA"
+            echo "patch sha256: $(shasum -a 256 Packaging/WineRuntime/patches/*.patch)"
+          } > out/BUILD-INFO.txt
+          cat out/BUILD-INFO.txt
+          tar -C "$RUNNER_TEMP/wine-install" -cJf out/wine-11.19-wowsilicon.tar.xz .
+          (cd out && shasum -a 256 wine-11.19-wowsilicon.tar.xz > wine-11.19-wowsilicon.tar.xz.sha256)
+          ls -l out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wine-runtime-11.19
+          path: out/
+          if-no-files-found: error
+
+      - name: Upload config.log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-build-logs
+          path: ${{ runner.temp }}/wine-build/config.log
+          if-no-files-found: ignore

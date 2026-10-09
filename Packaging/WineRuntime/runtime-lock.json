@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "wine": {
+    "version": "11.19",
+    "repository": "https://github.com/WineAndAqua/wine.git",
+    "branch": "wine-11.19-macos",
+    "commit": "479d46a96a325caff09e6143cb0636fcbe565ff9"
+  }
+}
